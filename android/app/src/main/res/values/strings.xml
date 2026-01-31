@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_description">Widget de Radio Juventud con reproductor y contador de racha</string>
+    <string name="widget_name">Radio Juventud</string>
+</resources>

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CLIENT_ID</key>
+	<string>740783345726-6rbfu6va7h0h61r9h44gofhndm3lui4f.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.740783345726-6rbfu6va7h0h61r9h44gofhndm3lui4f</string>
+	<key>ANDROID_CLIENT_ID</key>
+	<string>740783345726-2846durfu4r5osfcu6b16jkkc9204bnv.apps.googleusercontent.com</string>
+	<key>API_KEY</key>
+	<string>AIzaSyDqs1Asdpn6niGbxDbP5nvtl2QfXuLOomU</string>
+	<key>GCM_SENDER_ID</key>
+	<string>740783345726</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>com.juventud.palabramiel</string>
+	<key>PROJECT_ID</key>
+	<string>radio-juventud-a6f6e</string>
+	<key>STORAGE_BUCKET</key>
+	<string>radio-juventud-a6f6e.firebasestorage.app</string>
+	<key>IS_ADS_ENABLED</key>
+	<false></false>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false></false>
+	<key>IS_APPINVITE_ENABLED</key>
+	<true></true>
+	<key>IS_GCM_ENABLED</key>
+	<true></true>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true></true>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:740783345726:ios:e4aaad547126fda539c16f</string>
+</dict>
+</plist>

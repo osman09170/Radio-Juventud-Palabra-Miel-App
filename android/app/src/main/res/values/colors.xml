@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Colores de Radio Juventud Palabra Miel -->
+    <color name="radio_primary">#FF9AD5</color>
+    <color name="radio_primary_dark">#1A1A2E</color>
+    <color name="radio_secondary">#16213E</color>
+    <color name="radio_accent">#FFD700</color>
+</resources>

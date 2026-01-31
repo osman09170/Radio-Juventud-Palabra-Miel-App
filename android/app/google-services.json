@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "740783345726",
+    "project_id": "radio-juventud-a6f6e",
+    "storage_bucket": "radio-juventud-a6f6e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:740783345726:android:69e7a27e2ec2650a39c16f",
+        "android_client_info": {
+          "package_name": "com.juventud.palabramiel"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "740783345726-2846durfu4r5osfcu6b16jkkc9204bnv.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.juventud.palabramiel",
+            "certificate_hash": "b247b51584ef0b90dd44bdb3b741610134b5b355"
+          }
+        },
+        {
+          "client_id": "740783345726-ff0k2o8k8f32p1vvjigu5rhtjt00po5c.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAfZGA8o1ZC4coeGvNUt0yH5SEJADbb3EI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "740783345726-ff0k2o8k8f32p1vvjigu5rhtjt00po5c.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
