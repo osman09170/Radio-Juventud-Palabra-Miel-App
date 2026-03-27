@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../audio/audio_handler.dart';
-import '../services/user_preferences.dart';
-import '../services/widget_service.dart';
+import '../services/sleep_timer_service.dart';
 
 class RadioPlayer extends StatefulWidget {
   final String artist;
@@ -75,9 +75,11 @@ class _RadioPlayerState extends State<RadioPlayer>
         _glowController.reset();
       }
 
-      if (!wasPlaying && state.playing) {
-        _registerListening();
-      }
+    });
+
+    // Escuchar cambios del temporizador para refrescar el botón
+    SleepTimerService.instance.stream.listen((_) {
+      if (mounted) setState(() {});
     });
   }
 
@@ -87,12 +89,6 @@ class _RadioPlayerState extends State<RadioPlayer>
     _pulseController.dispose();
     _glowController.dispose();
     super.dispose();
-  }
-
-  Future<void> _registerListening() async {
-    final prefs = UserPreferences();
-    await prefs.registerListeningToday();
-    await WidgetService.updateStreak();
   }
 
   void _onTapDown(TapDownDetails details) {
@@ -184,8 +180,123 @@ class _RadioPlayerState extends State<RadioPlayer>
           _buildMetadataCard(),
           const SizedBox(height: 20),
           _buildPlayButton(buttonSize),
+          const SizedBox(height: 24),
+          _buildActionButtons(),
         ],
       ),
+    );
+  }
+
+  // ── Botones de acción (temporizador + compartir) ────────────────────────
+
+  /// StreamBuilder para que el botón siempre refleje el estado real del timer
+  Widget _buildActionButtons() {
+    return StreamBuilder<int>(
+      stream: SleepTimerService.instance.stream,
+      initialData: SleepTimerService.instance.remainingSeconds,
+      builder: (context, _) {
+        final timer = SleepTimerService.instance;
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _iconBtn(
+              icon: Icons.bedtime_rounded,
+              label: timer.isActive ? timer.formattedTime : 'Dormir',
+              active: timer.isActive,
+              activeColor: const Color(0xFF9B59B6),
+              onTap: _showSleepTimerSheet,
+            ),
+            const SizedBox(width: 28),
+            _iconBtn(
+              icon: Icons.share_rounded,
+              label: 'Compartir',
+              active: false,
+              activeColor: const Color(0xFF25D366),
+              onTap: _shareWhatsApp,
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _iconBtn({
+    required IconData icon,
+    required String label,
+    required bool active,
+    required Color activeColor,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        children: [
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 250),
+            width: 54,
+            height: 54,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: active
+                  ? activeColor.withValues(alpha: 0.18)
+                  : Colors.white.withValues(alpha: 0.07),
+              border: Border.all(
+                color: active
+                    ? activeColor.withValues(alpha: 0.8)
+                    : Colors.white.withValues(alpha: 0.2),
+                width: 1.5,
+              ),
+              boxShadow: active
+                  ? [
+                      BoxShadow(
+                        color: activeColor.withValues(alpha: 0.35),
+                        blurRadius: 14,
+                        spreadRadius: 2,
+                      )
+                    ]
+                  : [],
+            ),
+            child: Icon(
+              icon,
+              color: active ? activeColor : Colors.white60,
+              size: 24,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            label,
+            style: TextStyle(
+              color: active ? activeColor : Colors.white54,
+              fontSize: 11,
+              fontWeight: active ? FontWeight.w600 : FontWeight.normal,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _shareWhatsApp() async {
+    const msg =
+        '🎵 Estoy escuchando Radio Juventud Palabra Miel — ¡sintonízala! '
+        'http://juventudpalabramiel.org';
+    final uri = Uri.parse(
+        'whatsapp://send?text=${Uri.encodeComponent(msg)}');
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    } else {
+      // Fallback: share genérico
+      final webUri = Uri.parse(
+          'https://wa.me/?text=${Uri.encodeComponent(msg)}');
+      await launchUrl(webUri, mode: LaunchMode.externalApplication);
+    }
+  }
+
+  void _showSleepTimerSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => const _SleepTimerSheet(),
     );
   }
 
@@ -392,6 +503,152 @@ class _RadioPlayerState extends State<RadioPlayer>
           );
         },
       ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// BOTTOM SHEET — Temporizador para dormir
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _SleepTimerSheet extends StatelessWidget {
+  const _SleepTimerSheet();
+
+  static const _options = [15, 30, 45, 60, 90];
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<int>(
+      stream: SleepTimerService.instance.stream,
+      initialData: SleepTimerService.instance.remainingSeconds,
+      builder: (context, _) {
+        final isActive = SleepTimerService.instance.isActive;
+        return Container(
+          decoration: const BoxDecoration(
+            color: Color(0xFF12122A),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          ),
+          padding: const EdgeInsets.fromLTRB(24, 8, 24, 36),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Handle
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 20),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+
+              // Título
+              const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text('🌙', style: TextStyle(fontSize: 24)),
+                  SizedBox(width: 10),
+                  Text(
+                    'Temporizador para dormir',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'La radio se detendrá automáticamente',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.45),
+                  fontSize: 13,
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
+              // Opciones en grid
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                alignment: WrapAlignment.center,
+                children: _options.map((min) {
+                  return GestureDetector(
+                    onTap: () {
+                      SleepTimerService.instance.start(min);
+                      Navigator.pop(context);
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 22, vertical: 14),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF6C3483), Color(0xFF9B59B6)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF9B59B6)
+                                .withValues(alpha: 0.3),
+                            blurRadius: 8,
+                            spreadRadius: 1,
+                          ),
+                        ],
+                      ),
+                      child: Text(
+                        '$min min',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+
+              // Cancelar (solo si hay timer activo)
+              if (isActive) ...[
+                const SizedBox(height: 20),
+                GestureDetector(
+                  onTap: () {
+                    SleepTimerService.instance.cancel();
+                    Navigator.pop(context);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 24, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                          color: Colors.redAccent.withValues(alpha: 0.3)),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.close, color: Colors.redAccent, size: 16),
+                        SizedBox(width: 6),
+                        Text('Cancelar temporizador',
+                            style: TextStyle(
+                                color: Colors.redAccent, fontSize: 13)),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
     );
   }
 }

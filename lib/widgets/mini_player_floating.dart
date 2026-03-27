@@ -48,10 +48,7 @@ class _MiniPlayerFloatingState extends State<MiniPlayerFloating>
         isPlaying = state.playing;
       });
 
-      // Si empezó a reproducir, registrar la racha
-      if (!wasPlaying && state.playing) {
-        _registerListening();
-      }
+      // La racha se registra via ListeningTimerService en main.dart (requiere 1 hora)
     });
   }
 
@@ -63,18 +60,6 @@ class _MiniPlayerFloatingState extends State<MiniPlayerFloating>
         streakDays = streak;
       });
     }
-  }
-
-  Future<void> _registerListening() async {
-    final prefs = UserPreferences();
-    final newStreak = await prefs.registerListeningToday();
-    if (mounted) {
-      setState(() {
-        streakDays = newStreak;
-      });
-    }
-    // Actualizar el widget de pantalla principal
-    await WidgetService.updateStreak();
   }
 
   void _togglePlay() async {

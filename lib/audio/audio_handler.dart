@@ -150,12 +150,18 @@ class RadioAudioHandler extends BaseAudioHandler
   void _updateState({
     required bool playing,
     required AudioProcessingState processingState,
-  }) {playbackState.add(
+  }) {
+    playbackState.add(
       playbackState.value.copyWith(
         controls: [
           if (playing) MediaControl.pause else MediaControl.play,
           MediaControl.stop,
         ],
+        systemActions: const {
+          MediaAction.play,
+          MediaAction.pause,
+          MediaAction.stop,
+        },
         playing: playing,
         processingState: processingState,
       ),
@@ -176,7 +182,49 @@ class RadioAudioHandler extends BaseAudioHandler
     }
   }
 
-  // Controles
+  // --- Android Auto: Media Browser ---
+
+  /// Android Auto llama esto para mostrar el contenido navegable.
+  @override
+  Future<List<MediaItem>> getChildren(
+    String parentMediaId, [
+    Map<String, dynamic>? options,
+  ]) async {
+    return [
+      MediaItem(
+        id: 'radio_stream',
+        album: 'En vivo',
+        title: 'Radio Juventud Palabra Miel',
+        artist: 'Transmisión en vivo',
+        artUri: _artUri,
+        playable: true,
+      ),
+    ];
+  }
+
+  /// Android Auto solicita info de un item específico.
+  @override
+  Future<MediaItem?> getMediaItem(String mediaId) async {
+    return MediaItem(
+      id: 'radio_stream',
+      album: 'En vivo',
+      title: 'Radio Juventud Palabra Miel',
+      artist: 'Transmisión en vivo',
+      artUri: _artUri,
+      playable: true,
+    );
+  }
+
+  /// Android Auto inicia la reproducción por ID de item.
+  @override
+  Future<void> playFromMediaId(
+    String mediaId, [
+    Map<String, dynamic>? extras,
+  ]) async {
+    await play();
+  }
+
+  // --- Controles ---
   @override
   Future<void> play() async {
     try {

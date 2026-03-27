@@ -8,6 +8,7 @@ import 'eventos_screen.dart';
 import 'contacto_screen.dart';
 import 'radio_player.dart';
 import 'settings_screen.dart';
+import 'alarm_screen.dart';
 import '../widgets/mini_player_floating.dart';
 import '../services/widget_service.dart';
 import '../audio/audio_handler.dart';
@@ -143,8 +144,8 @@ class HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             currentArtist = artist;
             currentSong = song;
           });
-          // Actualizar el widget de la pantalla principal
-          WidgetService.updateTitle(newTitle);
+          // Actualizar el widget de la pantalla principal (solo canción, sin artista)
+          WidgetService.updateTitle(song.isNotEmpty ? song : newTitle);
           // Actualizar el título en la notificación del reproductor
           audioHandler.updateTitle(newTitle);
         }
@@ -207,7 +208,9 @@ class HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       case 2:
         return const ContactoScreen(key: ValueKey(2));
       case 3:
-        return const SettingsScreen(key: ValueKey(3));
+        return const AlarmScreen(key: ValueKey(3));
+      case 4:
+        return const SettingsScreen(key: ValueKey(4));
       default:
         return const SizedBox(key: ValueKey(-1));
     }
@@ -216,26 +219,28 @@ class HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Column(
+      body: Stack(
         children: [
-          Expanded(
-            child: Stack(
-              children: [
-                // ⭐ Fondo con imagen Fondo1.jpeg
-                Positioned.fill(
-                  child: Image.asset(
-                    "assets/images/Fondo1.jpeg",
-                    fit: BoxFit.cover,
-                  ),
-                ),
+          // ⭐ Fondo cubre TODO el body (incluyendo la zona del mini player)
+          Positioned.fill(
+            child: Image.asset(
+              "assets/images/Fondo1.jpeg",
+              fit: BoxFit.cover,
+            ),
+          ),
 
-                // ⭐ Capa oscura para contrastar texto
-                Container(
-                  color: Colors.black.withValues(alpha: 0.30),
-                ),
+          // ⭐ Capa oscura sobre el fondo
+          Positioned.fill(
+            child: Container(
+              color: Colors.black.withValues(alpha: 0.30),
+            ),
+          ),
 
-                // ⭐ Contenido principal con transiciones
-                AnimatedSwitcher(
+          // ⭐ Contenido + mini player en columna transparente
+          Column(
+            children: [
+              Expanded(
+                child: AnimatedSwitcher(
                   duration: const Duration(milliseconds: 300),
                   switchInCurve: Curves.easeOutCubic,
                   switchOutCurve: Curves.easeInCubic,
@@ -253,22 +258,19 @@ class HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   },
                   child: _buildCurrentPage(),
                 ),
-              ],
-            ),
-          ),
-
-          // Mini player fijo en la parte inferior (solo visible cuando NO está en la pestaña Radio)
-          if (_currentIndex != 0)
-            Container(
-              color: Colors.black,
-              child: SafeArea(
-                top: false,
-                child: MiniPlayerFloating(
-                  title: currentTitle,
-                  onTap: () => setState(() => _currentIndex = 0),
-                ),
               ),
-            ),
+
+              // Mini player flotante — sin fondo negro, el fondo de la app se ve detrás
+              if (_currentIndex != 0)
+                SafeArea(
+                  top: false,
+                  child: MiniPlayerFloating(
+                    title: currentTitle,
+                    onTap: () => setState(() => _currentIndex = 0),
+                  ),
+                ),
+            ],
+          ),
         ],
       ),
 
@@ -285,6 +287,7 @@ class HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           BottomNavigationBarItem(icon: Icon(Icons.radio), label: "Radio"),
           BottomNavigationBarItem(icon: Icon(Icons.event), label: "Eventos"),
           BottomNavigationBarItem(icon: Icon(Icons.contact_phone), label: "Contáctanos"),
+          BottomNavigationBarItem(icon: Icon(Icons.alarm), label: "Alarmas"),
           BottomNavigationBarItem(icon: Icon(Icons.settings), label: "Ajustes"),
         ],
     ),

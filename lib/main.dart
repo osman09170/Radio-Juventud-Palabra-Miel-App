@@ -4,10 +4,12 @@ import 'package:audio_service/audio_service.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 
+import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 import 'firebase_options.dart';
 import 'services/user_preferences.dart';
 import 'services/widget_service.dart';
 import 'services/scheduled_notifications_service.dart';
+import 'services/listening_timer_service.dart';
 import 'app_loader.dart';
 import 'audio/audio_handler.dart'; // aquí está el global audioHandler
 
@@ -39,6 +41,9 @@ Future<void> main() async {
   await ScheduledNotificationsService.initialize();
   await ScheduledNotificationsService.scheduleDailyNotifications();
 
+  // Inicializar AlarmManager (para alarmas de radio)
+  await AndroidAlarmManager.initialize();
+
   // 2) Inicializar AudioService y el handler global
   audioHandler = await AudioService.init(
     builder: () => RadioAudioHandler(),
@@ -55,7 +60,19 @@ Future<void> main() async {
     ),
   );
 
-  // 4) Levantar la app ya con todo inicializado
+  // 4) Conectar el rastreador de racha al audioHandler (requiere 1h continua)
+  audioHandler.playbackState.listen((state) {
+    if (state.playing) {
+      ListeningTimerService.instance.startListening();
+    } else {
+      ListeningTimerService.instance.stopListening();
+    }
+  });
+
+  // Resetear bandera diaria al arrancar (por si cambió el día)
+  ListeningTimerService.instance.resetDailyFlag();
+
+  // 5) Levantar la app ya con todo inicializado
   runApp(AppLoader(userExists: exists));
 }
 

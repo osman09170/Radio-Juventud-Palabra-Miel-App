@@ -159,6 +159,9 @@ class ScheduledNotificationsService {
       body: notificationBody,
       details: notificationDetails,
     );
+
+    // 🔥 RECORDATORIO NOCTURNO: 10:00 PM UTC — todos los días
+    await _scheduleStreakReminder();
   }
 
   /// Programa una notificación para días de semana (lunes a sábado)
@@ -280,6 +283,45 @@ class ScheduledNotificationsService {
     }
 
     return date;
+  }
+
+  /// 🔥 Recordatorio nocturno de racha — 10:00 PM UTC todos los días
+  static Future<void> _scheduleStreakReminder() async {
+    const details = NotificationDetails(
+      android: AndroidNotificationDetails(
+        'streak_reminder',
+        'Recordatorio de racha',
+        channelDescription: 'Recordatorio para no perder tu racha diaria',
+        importance: Importance.high,
+        priority: Priority.high,
+        icon: '@drawable/ic_notification',
+      ),
+      iOS: DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      ),
+    );
+
+    final nowUtc = tz.TZDateTime.now(tz.UTC);
+    var scheduledUtc = tz.TZDateTime(tz.UTC, nowUtc.year, nowUtc.month, nowUtc.day, 22, 0);
+
+    // Si las 22:00 UTC de hoy ya pasaron, programar para mañana
+    if (!scheduledUtc.isAfter(nowUtc)) {
+      scheduledUtc = scheduledUtc.add(const Duration(days: 1));
+    }
+
+    await _notifications.zonedSchedule(
+      100,
+      '🔥 ¡No pierdas tu racha!',
+      '¿Ya escuchaste Radio Juventud hoy? Mantén viva tu racha de días consecutivos.',
+      scheduledUtc,
+      details,
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+      matchDateTimeComponents: DateTimeComponents.time,
+    );
   }
 
   /// Cancela todas las notificaciones programadas
