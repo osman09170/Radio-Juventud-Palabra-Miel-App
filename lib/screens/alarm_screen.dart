@@ -74,14 +74,19 @@ class _AlarmScreenState extends State<AlarmScreen> with WidgetsBindingObserver {
     final alarm = await _showConfigSheet(time, null);
     if (alarm == null || !mounted) return;
 
+    final previous = List<AlarmModel>.from(_alarms);
     setState(() {
       _alarms = [..._alarms, alarm]
         ..sort((a, b) => a.hour != b.hour
             ? a.hour.compareTo(b.hour)
             : a.minute.compareTo(b.minute));
     });
-    await AlarmService.addAlarm(alarm);
-    _showSnack('Alarma ${alarm.formattedTime} · ${_timeUntil(alarm)}');
+    try {
+      await AlarmService.addAlarm(alarm);
+      _showSnack('Alarma ${alarm.formattedTime} · ${_timeUntil(alarm)}');
+    } catch (_) {
+      if (mounted) setState(() => _alarms = previous);
+    }
   }
 
   Future<void> _editAlarm(AlarmModel existing) async {
@@ -153,11 +158,16 @@ class _AlarmScreenState extends State<AlarmScreen> with WidgetsBindingObserver {
       await _showPermissionDialog();
       return;
     }
+    final previous = List<AlarmModel>.from(_alarms);
     setState(() {
       final idx = _alarms.indexWhere((a) => a.id == alarm.id);
       if (idx != -1) _alarms[idx] = alarm.copyWith(enabled: value);
     });
-    await AlarmService.toggleAlarm(alarm.id, value);
+    try {
+      await AlarmService.toggleAlarm(alarm.id, value);
+    } catch (_) {
+      if (mounted) setState(() => _alarms = previous);
+    }
   }
 
   Future<void> _delete(AlarmModel alarm) async {
@@ -525,7 +535,7 @@ class _AlarmScreenState extends State<AlarmScreen> with WidgetsBindingObserver {
                   Switch(
                     value: alarm.enabled,
                     onChanged: (v) => _toggle(alarm, v),
-                    activeColor: const Color(0xFFFF9AD5),
+                    activeThumbColor: const Color(0xFFFF9AD5),
                     inactiveThumbColor: Colors.white38,
                     inactiveTrackColor: Colors.white12,
                     materialTapTargetSize:
@@ -750,7 +760,7 @@ class _AlarmConfigSheetState extends State<_AlarmConfigSheet> {
                 Switch(
                   value: _vibrate,
                   onChanged: (v) => setState(() => _vibrate = v),
-                  activeColor: const Color(0xFFFF9AD5),
+                  activeThumbColor: const Color(0xFFFF9AD5),
                   inactiveThumbColor: Colors.white38,
                   inactiveTrackColor: Colors.white12,
                 ),

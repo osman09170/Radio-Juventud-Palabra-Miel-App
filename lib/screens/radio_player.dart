@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../audio/audio_handler.dart';
@@ -20,6 +21,8 @@ class RadioPlayer extends StatefulWidget {
 class _RadioPlayerState extends State<RadioPlayer>
     with TickerProviderStateMixin {
   bool isPlaying = false;
+  StreamSubscription? _playbackSubscription;
+  StreamSubscription? _timerSubscription;
 
   // Animaciones
   late AnimationController _scaleController;
@@ -57,34 +60,34 @@ class _RadioPlayerState extends State<RadioPlayer>
       CurvedAnimation(parent: _glowController, curve: Curves.easeInOut),
     );
 
-    audioHandler.playbackState.listen((state) {
+    _playbackSubscription = audioHandler.playbackState.listen((state) {
       if (!mounted) return;
 
-      final wasPlaying = isPlaying;
       setState(() {
         isPlaying = state.playing;
       });
 
       if (state.playing) {
-        _pulseController.repeat();
-        _glowController.repeat(reverse: true);
+        if (!_pulseController.isAnimating) _pulseController.repeat();
+        if (!_glowController.isAnimating) _glowController.repeat(reverse: true);
       } else {
         _pulseController.stop();
         _pulseController.reset();
         _glowController.stop();
         _glowController.reset();
       }
-
     });
 
     // Escuchar cambios del temporizador para refrescar el botón
-    SleepTimerService.instance.stream.listen((_) {
+    _timerSubscription = SleepTimerService.instance.stream.listen((_) {
       if (mounted) setState(() {});
     });
   }
 
   @override
   void dispose() {
+    _playbackSubscription?.cancel();
+    _timerSubscription?.cancel();
     _scaleController.dispose();
     _pulseController.dispose();
     _glowController.dispose();

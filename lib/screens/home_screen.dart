@@ -11,6 +11,8 @@ import 'settings_screen.dart';
 import 'alarm_screen.dart';
 import '../widgets/mini_player_floating.dart';
 import '../services/widget_service.dart';
+import '../services/sleep_timer_service.dart';
+import '../services/permission_service.dart';
 import '../audio/audio_handler.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -28,6 +30,7 @@ class HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   String currentTitle = "Transmisión en vivo";
   String currentArtist = "";
   String currentSong = "";
+  bool _fetchingMetadata = false;
 
   @override
   void initState() {
@@ -35,9 +38,10 @@ class HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     loadMetadata();
     startAutoRefresh();
-    _showWidgetPrompt();
+    SleepTimerService.instance.restore();
     _updateWidgetStreak();
     _checkWidgetIntent();
+    _runStartupDialogs();
   }
 
   @override
@@ -93,14 +97,18 @@ class HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
-  /// Muestra el prompt para añadir widget (estilo Duolingo)
-  Future<void> _showWidgetPrompt() async {
-    if (!Platform.isAndroid) return;
+  /// Secuencia de diálogos al arrancar: primero permisos, luego prompt del widget.
+  /// Así no se solapan y el usuario entiende cada paso.
+  Future<void> _runStartupDialogs() async {
+    await Future.delayed(const Duration(milliseconds: 800));
+    if (!mounted) return;
 
-    // Esperar 2 segundos después de cargar la pantalla
-    await Future.delayed(const Duration(seconds: 2));
+    // 1. Permisos (solo primera vez)
+    await PermissionService.requestAllOnFirstLaunch(context);
+    if (!mounted) return;
 
-    if (mounted) {
+    // 2. Prompt del widget (solo primera vez, solo Android)
+    if (Platform.isAndroid) {
       await WidgetService.showAddWidgetDialog(context);
     }
   }
@@ -119,15 +127,23 @@ class HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Future<void> loadMetadata() async {
+    if (_fetchingMetadata) return;
+    _fetchingMetadata = true;
     try {
-      final res = await http.get(Uri.parse(metadataUrl));
+      final res = await http
+          .get(Uri.parse(metadataUrl))
+          .timeout(const Duration(seconds: 8));
+
+      if (!mounted) return;
 
       if (res.statusCode == 200) {
         final data = json.decode(res.body);
 
         if (data["icestats"] != null && data["icestats"]["source"] != null) {
-          var info = data["icestats"]["source"];
-          final newTitle = info["title"] ?? "Transmisión en vivo";
+          // source puede ser una lista (múltiples streams) o un mapa (un solo stream)
+          final source = data["icestats"]["source"];
+          final info = source is List ? source[0] : source;
+          final newTitle = (info is Map ? info["title"] : null) ?? "Transmisión en vivo";
 
           // Separar artista y canción (formato: "Artista - Canción")
           String artist = "";
@@ -152,6 +168,8 @@ class HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       }
     } catch (e) {
       // print("Error metadata: $e"); // Debug only
+    } finally {
+      _fetchingMetadata = false;
     }
   }
 
@@ -165,7 +183,6 @@ class HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 RadioPlayer(
-                  key: ValueKey('$currentArtist-$currentSong'),
                   artist: currentArtist,
                   song: currentSong,
                 ),

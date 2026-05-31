@@ -78,36 +78,16 @@ Future<void> main() async {
 
 Future<void> _setupFirebaseMessaging() async {
   final messaging = FirebaseMessaging.instance;
+  // Los permisos se piden desde PermissionService al cargar HomeScreen.
 
-  // Pedir permisos
-  NotificationSettings settings = await messaging.requestPermission(
-    alert: true,
-    badge: true,
-    sound: true,
-  );
+  // Obtener el token FCM (puede fallar en simulador)
+  try {
+    await messaging.getToken();
+  } catch (_) {}
 
-  if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-    // print('Permisos de notificación concedidos'); // Debug only
+  // Escuchar notificaciones cuando la app está abierta
+  FirebaseMessaging.onMessage.listen((_) {});
 
-    // Obtener el token FCM (puede fallar en simulador)
-    try {
-      await messaging.getToken();
-      // String? token = await messaging.getToken();
-      // print('FCM Token: $token'); // Debug only
-    } catch (e) {
-      // print('No se pudo obtener FCM token (normal en simulador): $e'); // Debug only
-    }
-
-    // Escuchar notificaciones cuando la app está abierta
-    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      // print('Notificación recibida en foreground: ${message.notification?.title}'); // Debug only
-    });
-
-    // Escuchar cuando el usuario toca una notificación
-    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-      // print('Usuario tocó la notificación: ${message.notification?.title}'); // Debug only
-    });
-  } else {
-    // print('Permisos de notificación denegados'); // Debug only
-  }
+  // Escuchar cuando el usuario toca una notificación
+  FirebaseMessaging.onMessageOpenedApp.listen((_) {});
 }

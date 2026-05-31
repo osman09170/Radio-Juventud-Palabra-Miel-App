@@ -1,7 +1,7 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../audio/audio_handler.dart';
 import '../services/user_preferences.dart';
-import '../services/widget_service.dart';
 
 class MiniPlayerFloating extends StatefulWidget {
   final String title;
@@ -21,6 +21,7 @@ class _MiniPlayerFloatingState extends State<MiniPlayerFloating>
     with SingleTickerProviderStateMixin {
   bool isPlaying = false;
   int streakDays = 0;
+  StreamSubscription? _playbackSubscription;
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
 
@@ -28,11 +29,11 @@ class _MiniPlayerFloatingState extends State<MiniPlayerFloating>
   void initState() {
     super.initState();
 
-    // Animación de pulso para la racha
+    // Animación de pulso para la racha (arranca parada, se activa al cargar streak)
     _pulseController = AnimationController(
       duration: const Duration(milliseconds: 1500),
       vsync: this,
-    )..repeat(reverse: true);
+    );
 
     _pulseAnimation = Tween<double>(begin: 1.0, end: 1.1).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
@@ -41,24 +42,21 @@ class _MiniPlayerFloatingState extends State<MiniPlayerFloating>
     _loadStreak();
 
     // Escuchar cambios del audioHandler
-    audioHandler.playbackState.listen((state) {
+    _playbackSubscription = audioHandler.playbackState.listen((state) {
       if (!mounted) return;
-      final wasPlaying = isPlaying;
       setState(() {
         isPlaying = state.playing;
       });
-
-      // La racha se registra via ListeningTimerService en main.dart (requiere 1 hora)
     });
   }
 
   Future<void> _loadStreak() async {
     final prefs = UserPreferences();
     final streak = await prefs.getListeningStreak();
-    if (mounted) {
-      setState(() {
-        streakDays = streak;
-      });
+    if (!mounted) return;
+    setState(() => streakDays = streak);
+    if (streak > 0) {
+      _pulseController.repeat(reverse: true);
     }
   }
 
@@ -72,6 +70,7 @@ class _MiniPlayerFloatingState extends State<MiniPlayerFloating>
 
   @override
   void dispose() {
+    _playbackSubscription?.cancel();
     _pulseController.dispose();
     super.dispose();
   }

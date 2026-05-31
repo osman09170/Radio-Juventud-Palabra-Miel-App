@@ -35,32 +35,7 @@ class ScheduledNotificationsService {
       initSettings,
       onDidReceiveNotificationResponse: _onNotificationTap,
     );
-
-    // Solicitar permisos en Android 13+
-    await _requestPermissions();
-  }
-
-  /// Solicita permisos de notificación
-  static Future<void> _requestPermissions() async {
-    final androidImplementation =
-        _notifications.resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>();
-
-    if (androidImplementation != null) {
-      await androidImplementation.requestNotificationsPermission();
-    }
-
-    final iosImplementation =
-        _notifications.resolvePlatformSpecificImplementation<
-            IOSFlutterLocalNotificationsPlugin>();
-
-    if (iosImplementation != null) {
-      await iosImplementation.requestPermissions(
-        alert: true,
-        badge: true,
-        sound: true,
-      );
-    }
+    // Los permisos de notificación se solicitan desde PermissionService al cargar HomeScreen.
   }
 
   /// Maneja el tap en la notificación

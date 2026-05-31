@@ -2,7 +2,7 @@ name: radio_pm
 description: "A new Flutter project."
 publish_to: 'none'
 
-version: 9.1.2+11
+version: 9.2.0+12
 
 environment:
   sdk: ^3.10.0
@@ -31,6 +31,7 @@ dependencies:
   upgrader: ^11.0.0
   package_info_plus: ^8.0.0
   android_alarm_manager_plus: ^4.0.1
+  cloud_firestore: ^4.17.5
 
 dev_dependencies:
   flutter_test:

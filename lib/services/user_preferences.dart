@@ -103,6 +103,26 @@ class UserPreferences {
     return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
   }
 
+  // ========== SLEEP TIMER ==========
+
+  /// Guarda el deadline del sleep timer como epoch en milisegundos
+  Future<void> saveSleepTimer(int deadlineMs) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('sleep_timer_deadline', deadlineMs);
+  }
+
+  /// Devuelve el deadline guardado (0 si no hay ninguno)
+  Future<int> getSleepTimer() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt('sleep_timer_deadline') ?? 0;
+  }
+
+  /// Elimina el deadline guardado
+  Future<void> clearSleepTimer() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('sleep_timer_deadline');
+  }
+
   // ========== WIDGET PROMPT ==========
 
   /// Verifica si ya se mostró el prompt del widget

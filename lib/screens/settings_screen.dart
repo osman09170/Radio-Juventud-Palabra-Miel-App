@@ -10,8 +10,7 @@ class SettingsScreen extends StatefulWidget {
   State<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _SettingsScreenState extends State<SettingsScreen>
-    with AutomaticKeepAliveClientMixin {
+class _SettingsScreenState extends State<SettingsScreen> {
 
   final prefs = UserPreferences();
 
@@ -24,27 +23,39 @@ class _SettingsScreenState extends State<SettingsScreen>
   String appVersion = '';
 
   @override
-  bool get wantKeepAlive => false;
-
-  @override
   void initState() {
     super.initState();
     cargarDatos();
     cargarVersion();
   }
 
+  @override
+  void dispose() {
+    nombreCtrl.dispose();
+    apellidosCtrl.dispose();
+    paisCtrl.dispose();
+    iglesiaCtrl.dispose();
+    super.dispose();
+  }
+
   void cargarVersion() async {
     final packageInfo = await PackageInfo.fromPlatform();
+    if (!mounted) return;
     setState(() {
       appVersion = 'v${packageInfo.version} (${packageInfo.buildNumber})';
     });
   }
 
   void cargarDatos() async {
-    nombreCtrl.text = await prefs.getNombre();
-    apellidosCtrl.text = await prefs.getApellidos();
-    paisCtrl.text = await prefs.getPais();
-    iglesiaCtrl.text = await prefs.getIglesia();
+    final nombre    = await prefs.getNombre();
+    final apellidos = await prefs.getApellidos();
+    final pais      = await prefs.getPais();
+    final iglesia   = await prefs.getIglesia();
+    if (!mounted) return;
+    nombreCtrl.text    = nombre;
+    apellidosCtrl.text = apellidos;
+    paisCtrl.text      = pais;
+    iglesiaCtrl.text   = iglesia;
     setState(() {});
   }
 
@@ -102,8 +113,6 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   @override
   Widget build(BuildContext context) {
-    super.build(context);
-
     return Scaffold(
       body: Stack(
         children: [
@@ -214,29 +223,25 @@ class _SettingsScreenState extends State<SettingsScreen>
                 //         BOTÓN EDITAR (ABAJO DE LOS CAMPOS)
                 // --------------------------------------------------------------
                 if (!editando)
-                  AnimatedOpacity(
-                    opacity: 1.0,
-                    duration: const Duration(milliseconds: 300),
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        setState(() => editando = true);
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF8E44AD),
-                        elevation: 6,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 22,
-                          vertical: 14,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      setState(() => editando = true);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF8E44AD),
+                      elevation: 6,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 22,
+                        vertical: 14,
                       ),
-                      icon: const Icon(Icons.edit, color: Colors.white),
-                      label: const Text(
-                        "Editar información",
-                        style: TextStyle(fontSize: 18, color: Colors.white),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
                       ),
+                    ),
+                    icon: const Icon(Icons.edit, color: Colors.white),
+                    label: const Text(
+                      "Editar información",
+                      style: TextStyle(fontSize: 18, color: Colors.white),
                     ),
                   ),
 
@@ -246,13 +251,10 @@ class _SettingsScreenState extends State<SettingsScreen>
                 //         BOTÓN REINICIAR APLICACIÓN
                 // --------------------------------------------------------------
                 if (!editando)
-                  AnimatedOpacity(
-                    opacity: 1.0,
-                    duration: const Duration(milliseconds: 300),
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        // Mostrar diálogo de confirmación
-                        showDialog(
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      // Mostrar diálogo de confirmación
+                      showDialog(
                           context: context,
                           builder: (context) => AlertDialog(
                             backgroundColor: const Color(0xFF2C2C2C),
@@ -309,7 +311,6 @@ class _SettingsScreenState extends State<SettingsScreen>
                         style: TextStyle(fontSize: 18, color: Colors.white),
                       ),
                     ),
-                  ),
 
                 const SizedBox(height: 40),
 

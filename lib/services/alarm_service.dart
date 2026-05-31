@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 import 'dart:typed_data';
 import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 import 'package:audio_service/audio_service.dart';
@@ -141,10 +142,13 @@ class AlarmModel {
 Future<void> alarmCallback(int id) async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Paso 1: Intentar iniciar la radio
+  // Paso 1: Iniciar la radio
+  // Nota: este callback corre en un isolate separado — NO se puede usar la
+  // variable global `audioHandler` (vive en el isolate principal).
+  // AudioService.init() conecta al servicio existente o crea uno nuevo.
   bool audioStarted = false;
   try {
-    final handler = await AudioService.init(
+    final handler = await AudioService.init<RadioAudioHandler>(
       builder: () => RadioAudioHandler(),
       config: const AudioServiceConfig(
         androidNotificationChannelId: 'com.juventud.palabramiel.channel.audio',
@@ -155,14 +159,14 @@ Future<void> alarmCallback(int id) async {
         notificationColor: Color(0xFFFF9AD5),
       ),
     );
+    // Esperar a que _init() complete (configura el audio source)
+    // antes de llamar play(). Sin esto, play() falla en silencio.
+    await handler.initialized.timeout(const Duration(seconds: 6));
     await handler.play();
     audioStarted = true;
   } catch (_) {
-    // El servicio ya podría estar corriendo
-    try {
-      await audioHandler.play();
-      audioStarted = true;
-    } catch (_) {}
+    // Si falla (p.ej. timeout o error de red), la notificación
+    // sirve de respaldo para que el usuario abra la app manualmente.
   }
 
   // Paso 2: Mostrar notificación de alarma (siempre, como respaldo)
@@ -205,8 +209,10 @@ Future<void> alarmCallback(int id) async {
     );
   } catch (_) {}
 
-  // Paso 3: Reprogramar si aplica
-  await AlarmService._rescheduleAfterFire(id);
+  // Paso 3: Reprogramar si aplica (en try/catch para que siempre se ejecute)
+  try {
+    await AlarmService._rescheduleAfterFire(id);
+  } catch (_) {}
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -314,6 +320,9 @@ class AlarmService {
     }
   }
 
-  static int generateId() =>
-      DateTime.now().millisecondsSinceEpoch % 1000000;
+  static int generateId() {
+    // ID aleatorio dentro del rango de Java int (max 2^31-1).
+    // Evita el patrón anterior de módulo pequeño que causaba colisiones cada ~16 min.
+    return Random().nextInt(0x7FFFFFFF) + 1; // nunca 0
+  }
 }

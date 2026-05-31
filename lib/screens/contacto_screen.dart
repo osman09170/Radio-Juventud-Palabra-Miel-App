@@ -32,19 +32,8 @@ class ContactoScreen extends StatelessWidget {
   //  TELEGRAM
   // -------------------------
   Future<void> abrirTelegram() async {
-    final prefs = UserPreferences();
-    final datos = await prefs.getUser();
-
-    final nombre = datos["nombre"];
-    final apellidos = datos["apellidos"];
-    final pais = datos["pais"];
-    final iglesia = datos["iglesia"];
-
-    final mensaje = Uri.encodeComponent(
-        "Hola, soy $nombre $apellidos de $pais, de la iglesia $iglesia, sintonizándolos."
-    );
-
-    final url = Uri.parse("https://t.me/+${numero}?text=$mensaje");
+    // Telegram no soporta pre-llenado de mensaje — solo abre el chat
+    final url = Uri.parse("https://t.me/+$numero");
     await launchUrl(url, mode: LaunchMode.externalApplication);
   }
 
@@ -66,10 +55,10 @@ class ContactoScreen extends StatelessWidget {
     final uri = Uri(
       scheme: "mailto",
       path: correo,
-      query: Uri.encodeFull(
-        "subject=Contacto desde la App"
-            "&body=$mensaje",
-      ),
+      queryParameters: {
+        "subject": "Contacto desde la App",
+        "body": mensaje,
+      },
     );
 
     await launchUrl(uri);
