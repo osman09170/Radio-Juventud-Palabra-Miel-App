@@ -214,8 +214,8 @@ class RadioAudioHandler extends BaseAudioHandler
       ),
     );
 
-    // Actualizar widget de la pantalla principal
-    WidgetService.updatePlayingState(playing);
+    // Actualizar widget de la pantalla principal (silencioso si falla en background)
+    WidgetService.updatePlayingState(playing).catchError((_) {});
   }
 
   /// Actualiza el título en la notificación

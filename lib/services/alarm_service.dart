@@ -39,6 +39,22 @@ class AlarmPermissions {
       await _ch.invokeMethod('openBatterySettings');
     } catch (_) {}
   }
+
+  static Future<bool> canUseFullScreenIntent() async {
+    if (!Platform.isAndroid) return true;
+    try {
+      return await _ch.invokeMethod<bool>('canUseFullScreenIntent') ?? true;
+    } catch (_) {
+      return true;
+    }
+  }
+
+  static Future<void> requestFullScreenIntent() async {
+    if (!Platform.isAndroid) return;
+    try {
+      await _ch.invokeMethod('requestFullScreenIntent');
+    } catch (_) {}
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -161,7 +177,7 @@ Future<void> alarmCallback(int id) async {
     );
     // Esperar a que _init() complete (configura el audio source)
     // antes de llamar play(). Sin esto, play() falla en silencio.
-    await handler.initialized.timeout(const Duration(seconds: 6));
+    await handler.initialized.timeout(const Duration(seconds: 15));
     await handler.play();
     audioStarted = true;
   } catch (_) {
@@ -192,20 +208,23 @@ Future<void> alarmCallback(int id) async {
           : 'Toca para abrir la radio',
       NotificationDetails(
         android: AndroidNotificationDetails(
-          'radio_alarm_v2',
+          'radio_alarm_v3',
           'Alarmas de Radio',
+          channelDescription: 'Notificaciones de alarma de la radio',
           importance: Importance.max,
           priority: Priority.max,
           enableVibration: alarm.vibrate,
           vibrationPattern: alarm.vibrate
               ? Int64List.fromList([0, 400, 200, 400, 200, 400])
               : null,
-          playSound: !audioStarted,
+          playSound: true,
+          audioAttributesUsage: AudioAttributesUsage.alarm,
           category: AndroidNotificationCategory.alarm,
           visibility: NotificationVisibility.public,
           fullScreenIntent: true,
         ),
       ),
+      payload: 'alarm:$id',
     );
   } catch (_) {}
 
@@ -258,6 +277,9 @@ class AlarmService {
       await _schedule(alarms[idx]);
     } else {
       await AndroidAlarmManager.cancel(id);
+      if (Platform.isAndroid) {
+        try { await _alarmCh.invokeMethod('cancelLaunchAlarm', {'id': id}); } catch (_) {}
+      }
     }
   }
 
@@ -266,6 +288,9 @@ class AlarmService {
     alarms.removeWhere((a) => a.id == id);
     await _saveAlarms(alarms);
     await AndroidAlarmManager.cancel(id);
+    if (Platform.isAndroid) {
+      try { await _alarmCh.invokeMethod('cancelLaunchAlarm', {'id': id}); } catch (_) {}
+    }
   }
 
   static DateTime nextAlarmTime(AlarmModel alarm) {
@@ -291,12 +316,30 @@ class AlarmService {
     return DateTime(now.year, now.month, now.day + 1, alarm.hour, alarm.minute);
   }
 
+  static const _alarmCh = MethodChannel('com.juventud.palabramiel/alarm');
+
   static Future<void> _schedule(AlarmModel alarm) async {
     final alarmTime = nextAlarmTime(alarm);
+
+    // 1) Alarma nativa que ABRE LA APP directamente (AlarmLaunchReceiver)
+    //    Usa setAlarmClock() — máxima prioridad, muestra ícono en barra de estado,
+    //    funciona en Doze mode y abre la activity sobre la pantalla de bloqueo.
+    if (Platform.isAndroid) {
+      try {
+        await _alarmCh.invokeMethod('scheduleLaunchAlarm', {
+          'alarmTimeMs': alarmTime.millisecondsSinceEpoch,
+          'id': alarm.id,
+        });
+      } catch (_) {}
+    }
+
+    // 2) android_alarm_manager_plus — callback que reproduce la radio en background
+    //    como respaldo si la app ya estaba abierta o el usuario no ve la pantalla.
     await AndroidAlarmManager.oneShotAt(
       alarmTime,
       alarm.id,
       alarmCallback,
+      alarmClock: true,
       exact: true,
       wakeup: true,
       rescheduleOnReboot: true,

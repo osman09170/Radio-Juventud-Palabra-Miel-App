@@ -42,7 +42,6 @@ class AppLoader extends StatelessWidget {
         pageTransitionsTheme: const PageTransitionsTheme(
           builders: {
             TargetPlatform.android: CustomPageTransitionBuilder(),
-            TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
           },
         ),
       ),

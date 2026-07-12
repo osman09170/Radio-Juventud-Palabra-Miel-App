@@ -24,6 +24,7 @@ class HomeScreen extends StatefulWidget {
 
 class HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   int _currentIndex = 0;
+  bool _isAutomotive = false;
   static const platform = MethodChannel('com.juventud.palabramiel/widget');
 
   final String metadataUrl = "http://134.122.127.126:8000/status-json.xsl";
@@ -36,6 +37,7 @@ class HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _checkIfAutomotive();
     loadMetadata();
     startAutoRefresh();
     SleepTimerService.instance.restore();
@@ -78,17 +80,31 @@ class HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
-  /// Verifica si la app fue abierta desde el widget con acción toggle
+  /// Detecta si está corriendo en Android Automotive OS
+  Future<void> _checkIfAutomotive() async {
+    if (!Platform.isAndroid) return;
+    try {
+      final bool result = await platform.invokeMethod('isAutomotive');
+      if (mounted) setState(() => _isAutomotive = result);
+    } catch (_) {}
+  }
+
+  /// Verifica si la app fue abierta desde el widget o desde una alarma
   Future<void> _checkWidgetIntent() async {
     if (!Platform.isAndroid) return;
 
     try {
       final String? action = await platform.invokeMethod('getIntentAction');
       if (action == 'toggle') {
-        // Toggle play/pause
+        // Toggle play/pause desde widget
         if (audioHandler.playbackState.value.playing) {
           await audioHandler.pause();
         } else {
+          await audioHandler.play();
+        }
+      } else if (action == 'alarm') {
+        // La app se abrió por la alarma — reproducir radio automáticamente
+        if (!audioHandler.playbackState.value.playing) {
           await audioHandler.play();
         }
       }
@@ -221,13 +237,11 @@ class HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           ),
         );
       case 1:
-        return const EventosScreen(key: ValueKey(1));
+        return const ContactoScreen(key: ValueKey(1));
       case 2:
-        return const ContactoScreen(key: ValueKey(2));
+        return const AlarmScreen(key: ValueKey(2));
       case 3:
-        return const AlarmScreen(key: ValueKey(3));
-      case 4:
-        return const SettingsScreen(key: ValueKey(4));
+        return const SettingsScreen(key: ValueKey(3));
       default:
         return const SizedBox(key: ValueKey(-1));
     }
@@ -235,6 +249,27 @@ class HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
+    // En Android Automotive mostrar solo el reproductor
+    if (_isAutomotive) {
+      return Scaffold(
+        body: Stack(
+          children: [
+            Positioned.fill(
+              child: Image.asset("assets/images/Fondo1.jpeg", fit: BoxFit.cover),
+            ),
+            Positioned.fill(
+              child: Container(color: Colors.black.withValues(alpha: 0.30)),
+            ),
+            SafeArea(
+              child: Center(
+                child: RadioPlayer(artist: currentArtist, song: currentSong),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Scaffold(
       body: Stack(
         children: [
@@ -302,7 +337,6 @@ class HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         type: BottomNavigationBarType.fixed,  // Esto evita transparencias
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.radio), label: "Radio"),
-          BottomNavigationBarItem(icon: Icon(Icons.event), label: "Eventos"),
           BottomNavigationBarItem(icon: Icon(Icons.contact_phone), label: "Contáctanos"),
           BottomNavigationBarItem(icon: Icon(Icons.alarm), label: "Alarmas"),
           BottomNavigationBarItem(icon: Icon(Icons.settings), label: "Ajustes"),

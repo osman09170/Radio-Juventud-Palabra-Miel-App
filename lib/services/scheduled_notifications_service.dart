@@ -2,6 +2,7 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
+import '../audio/audio_handler.dart';
 
 class ScheduledNotificationsService {
   static final FlutterLocalNotificationsPlugin _notifications =
@@ -15,20 +16,8 @@ class ScheduledNotificationsService {
     // Configurar zona horaria de Guatemala (GMT-6)
     tz.setLocalLocation(tz.getLocation('America/Guatemala'));
 
-    // Configuración para Android
-    const androidSettings = AndroidInitializationSettings('@drawable/ic_notification');
-
-    // Configuración para iOS
-    const iosSettings = DarwinInitializationSettings(
-      requestAlertPermission: true,
-      requestBadgePermission: true,
-      requestSoundPermission: true,
-    );
-
-    // Inicializar plugin
     const initSettings = InitializationSettings(
-      android: androidSettings,
-      iOS: iosSettings,
+      android: AndroidInitializationSettings('@drawable/ic_notification'),
     );
 
     await _notifications.initialize(
@@ -40,8 +29,12 @@ class ScheduledNotificationsService {
 
   /// Maneja el tap en la notificación
   static void _onNotificationTap(NotificationResponse response) {
-    // Aquí puedes agregar lógica para abrir la app o una pantalla específica
-    // Por ejemplo, abrir el reproductor de radio
+    // Si es una alarma de radio, iniciar reproducción
+    if (response.payload != null && response.payload!.startsWith('alarm:')) {
+      try {
+        audioHandler.play();
+      } catch (_) {}
+    }
   }
 
   /// Programa las notificaciones diarias
@@ -49,26 +42,15 @@ class ScheduledNotificationsService {
     // Cancelar notificaciones previas
     await _notifications.cancelAll();
 
-    // Configuración de notificación para Android
-    const androidDetails = AndroidNotificationDetails(
-      'daily_reminders',
-      'Recordatorios diarios',
-      channelDescription: 'Notificaciones para recordarte escuchar Radio Juventud Palabra Miel',
-      importance: Importance.high,
-      priority: Priority.high,
-      icon: '@drawable/ic_notification',
-    );
-
-    // Configuración de notificación para iOS
-    const iosDetails = DarwinNotificationDetails(
-      presentAlert: true,
-      presentBadge: true,
-      presentSound: true,
-    );
-
     const notificationDetails = NotificationDetails(
-      android: androidDetails,
-      iOS: iosDetails,
+      android: AndroidNotificationDetails(
+        'daily_reminders',
+        'Recordatorios diarios',
+        channelDescription: 'Notificaciones para recordarte escuchar Radio Juventud Palabra Miel',
+        importance: Importance.high,
+        priority: Priority.high,
+        icon: '@drawable/ic_notification',
+      ),
     );
 
     const notificationBody = 'Ya esta al aire el mensaje de Jesucristo para la salvacion de todo aquel que cree en ese Cristo, Escuchalo Aqui';
@@ -270,11 +252,6 @@ class ScheduledNotificationsService {
         importance: Importance.high,
         priority: Priority.high,
         icon: '@drawable/ic_notification',
-      ),
-      iOS: DarwinNotificationDetails(
-        presentAlert: true,
-        presentBadge: true,
-        presentSound: true,
       ),
     );
 

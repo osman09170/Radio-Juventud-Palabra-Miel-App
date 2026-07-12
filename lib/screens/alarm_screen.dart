@@ -12,6 +12,7 @@ class _AlarmScreenState extends State<AlarmScreen> with WidgetsBindingObserver {
   List<AlarmModel> _alarms = [];
   bool _loading = true;
   bool _hasExactPermission = true;
+  bool _hasFullScreenPermission = true;
 
   @override
   void initState() {
@@ -43,9 +44,15 @@ class _AlarmScreenState extends State<AlarmScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _checkPermission() async {
-    final ok = await AlarmPermissions.canScheduleExact();
+    final results = await Future.wait([
+      AlarmPermissions.canScheduleExact(),
+      AlarmPermissions.canUseFullScreenIntent(),
+    ]);
     if (!mounted) return;
-    setState(() => _hasExactPermission = ok);
+    setState(() {
+      _hasExactPermission = results[0];
+      _hasFullScreenPermission = results[1];
+    });
   }
 
   // ── Helpers de tiempo ──────────────────────────────────────────────────
@@ -227,7 +234,7 @@ class _AlarmScreenState extends State<AlarmScreen> with WidgetsBindingObserver {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Para que la alarma suene exactamente a la hora configurada, necesita 2 permisos:',
+              'Para que la alarma suene y abra la app automáticamente, necesita estos permisos:',
               style: TextStyle(
                   color: Colors.white.withValues(alpha: 0.7),
                   height: 1.5),
@@ -238,6 +245,9 @@ class _AlarmScreenState extends State<AlarmScreen> with WidgetsBindingObserver {
             const SizedBox(height: 10),
             _permRow(Icons.battery_saver, '2. Sin restricción de batería',
                 'Evita que Android la duerma'),
+            const SizedBox(height: 10),
+            _permRow(Icons.fullscreen, '3. Pantalla completa',
+                'Abre la app sobre la pantalla de bloqueo'),
           ],
         ),
         actions: [
@@ -257,6 +267,7 @@ class _AlarmScreenState extends State<AlarmScreen> with WidgetsBindingObserver {
               Navigator.pop(context);
               await AlarmPermissions.requestExact();
               await AlarmPermissions.openBatterySettings();
+              await AlarmPermissions.requestFullScreenIntent();
             },
             child: const Text('Dar permisos',
                 style: TextStyle(fontWeight: FontWeight.bold)),
@@ -339,8 +350,8 @@ class _AlarmScreenState extends State<AlarmScreen> with WidgetsBindingObserver {
               ),
             ),
 
-            // Banner de permisos (si falta)
-            if (!_hasExactPermission)
+            // Banner de permisos (si falta exacto o pantalla completa)
+            if (!_hasExactPermission || !_hasFullScreenPermission)
               GestureDetector(
                 onTap: _showPermissionDialog,
                 child: Container(
@@ -358,10 +369,12 @@ class _AlarmScreenState extends State<AlarmScreen> with WidgetsBindingObserver {
                       const Icon(Icons.warning_amber_rounded,
                           color: Colors.orange, size: 18),
                       const SizedBox(width: 10),
-                      const Expanded(
+                      Expanded(
                         child: Text(
-                          'Faltan permisos para que la alarma suene. Toca para configurar.',
-                          style: TextStyle(
+                          !_hasExactPermission
+                              ? 'Faltan permisos para que la alarma suene. Toca para configurar.'
+                              : 'Permiso de pantalla completa requerido para abrir la app al sonar. Toca para activar.',
+                          style: const TextStyle(
                               color: Colors.orange, fontSize: 12),
                         ),
                       ),

@@ -1,3 +1,5 @@
+
+
 // lib/main.dart
 import 'package:flutter/material.dart';
 import 'package:audio_service/audio_service.dart';
@@ -5,6 +7,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 
 import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'firebase_options.dart';
 import 'services/user_preferences.dart';
 import 'services/widget_service.dart';
@@ -35,7 +38,10 @@ Future<void> main() async {
   final exists = await prefs.userExists();
 
   // Inicializar Widget Service para el gadget de pantalla
-  await WidgetService.initialize();
+  // (falla silenciosamente en Android Automotive OS que no soporta widgets)
+  try {
+    await WidgetService.initialize();
+  } catch (_) {}
 
   // Inicializar y programar notificaciones locales diarias
   await ScheduledNotificationsService.initialize();
@@ -59,6 +65,18 @@ Future<void> main() async {
       notificationColor: Color(0xFFFF9AD5), // Rosado de la radio
     ),
   );
+
+  // 3b) Si la app fue abierta tocando una notificación de alarma, iniciar radio
+  try {
+    final plugin = FlutterLocalNotificationsPlugin();
+    final launchDetails = await plugin.getNotificationAppLaunchDetails();
+    if (launchDetails != null &&
+        launchDetails.didNotificationLaunchApp &&
+        launchDetails.notificationResponse?.payload != null &&
+        launchDetails.notificationResponse!.payload!.startsWith('alarm:')) {
+      await audioHandler.play();
+    }
+  } catch (_) {}
 
   // 4) Conectar el rastreador de racha al audioHandler (requiere 1h continua)
   audioHandler.playbackState.listen((state) {
